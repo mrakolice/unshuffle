@@ -3,6 +3,8 @@ from unittest import mock
 import json
 import math
 import struct
+import pytest
+import sys
 import wave
 
 from unshuffle.audio import SimilarityEngine
@@ -45,6 +47,7 @@ def test_extraction_failure_messages_map_to_user_tags():
     assert SimilarityEngine.extraction_failure_tag_for_message("dr_wav: Failed to open file") == "Corrupted"
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific subprocess flags")
 def test_windows_feature_extraction_hides_subprocess_window(tmp_path: Path, monkeypatch):
     extractor = tmp_path / "extractor.exe"
     extractor.write_text("fake", encoding="utf-8")

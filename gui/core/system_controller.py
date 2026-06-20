@@ -16,8 +16,6 @@ from gui.core import (
     system_anchor_rows,
     system_taxonomy,
 )
-from gui.main.actions.history import reset_learning
-from gui.main.actions.library import handle_refresh_all
 from unshuffle.bridge import DiscoveryBridge
 from unshuffle.logic.coherence.models import ANCHOR_VERIFIED, AnchorProfile
 
@@ -590,10 +588,12 @@ class SystemController:
             self._prompt_rescan("Learned corrections were removed.")
 
     def reset_corrections(self) -> None:
+        from gui.main.actions.history import reset_learning
         reset_learning(self.app)
         self.refresh_corrections()
 
     def run_rescan(self) -> None:
+        from gui.main.actions.library import handle_refresh_all
         handle_refresh_all(self.app)
 
     def prompt_anchor_apply_rescan(self) -> None:

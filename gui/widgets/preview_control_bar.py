@@ -1,7 +1,6 @@
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout, QLabel, QSlider, QWidget, QApplication
 from PySide6.QtCore import Qt, QSize, Signal, QPoint, QMimeData, QUrl
 from PySide6.QtGui import QIcon, QPixmap, QDrag
-from PySide6.QtMultimedia import QMediaPlayer
 from pathlib import Path
 
 from . import AnimatedIconButton, ElidingLabel
@@ -13,7 +12,9 @@ from ..utils.styles import (
 from ..utils.layout_helpers import apply_layout_margins, apply_layout_spacing
 from ..utils.widget_helpers import apply_fixed_height, apply_fixed_size
 
-from gui.core.audio_player import SoundPreviewPlayer
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from gui.core.audio_player import SoundPreviewPlayer
 from ..utils.constants import (
     DIFFERENT_ICON,
     DRAGOUT_ICON,
@@ -31,7 +32,7 @@ from ..utils.constants import (
 
 
 class DragOutIconButton(AnimatedIconButton):
-    def __init__(self, player: SoundPreviewPlayer, parent=None):
+    def __init__(self, player: "SoundPreviewPlayer", parent=None):
         super().__init__(DRAGOUT_ICON, QSize(18, 18), parent)
         self.player = player
         self._press_pos: QPoint | None = None
@@ -90,6 +91,7 @@ class PreviewControlBar(QFrame):
         apply_layout_margins(layout, (PREVIEW_BAR_MARGIN_H, 0, PREVIEW_BAR_MARGIN_H, 0))
         apply_layout_spacing(layout, PREVIEW_BAR_SPACING)
 
+        from gui.core.audio_player import SoundPreviewPlayer
         self.player = SoundPreviewPlayer.instance()
 
         self.btn_play_pause = AnimatedIconButton(PLAY_ICON, QSize(18, 18))
@@ -128,6 +130,7 @@ class PreviewControlBar(QFrame):
 
     def _update_play_pause_icon(self, state):
         """Swap icons depending on playback state."""
+        from PySide6.QtMultimedia import QMediaPlayer
         is_playing = state == QMediaPlayer.PlayingState or (hasattr(QMediaPlayer, "PlaybackState") and state == QMediaPlayer.PlaybackState.PlayingState)
         
         if is_playing:

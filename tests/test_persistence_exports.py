@@ -64,7 +64,7 @@ def test_export_staging_plan_csv_matches_gui_shape(tmp_path: Path):
         rows = list(csv.DictReader(file_handle))
     assert rows == [
         {
-            "source_directory": "Source\\Kicks",
+            "source_directory": str(Path("Source/Kicks")),
             "source_filename": "kick.wav",
             "pack": "Pack",
             "category": "Kicks",

@@ -11,6 +11,3 @@ Navigation:
 - `gui.utils`: shared constants, styles, state/session/history helpers
 """
 
-from .main import ModernApp
-
-__all__ = ["ModernApp"]

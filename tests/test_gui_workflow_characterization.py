@@ -2017,11 +2017,11 @@ class UndoRefreshTests(unittest.TestCase):
 
         view = LibraryTreeView.__new__(LibraryTreeView)
         records = [
-            SimpleNamespace(source_path=Path(r"C:\Samples\Pack1\kick.wav")),
-            SimpleNamespace(source_path=Path(r"C:\Samples\Pack1b\snare.wav")),
+            SimpleNamespace(source_path=Path("C:/Samples/Pack1/kick.wav")),
+            SimpleNamespace(source_path=Path("C:/Samples/Pack1b/snare.wav")),
         ]
 
-        self.assertEqual(view._find_common_parent(records), Path(r"C:\Samples"))
+        self.assertEqual(view._find_common_parent(records), Path("C:/Samples"))
 
     def test_preserved_dialog_rejects_path_outside_source_roots(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -2714,7 +2714,7 @@ class WorkflowControllerRestoreTests(unittest.TestCase):
             controller.start_refresh([])
 
         start_scan_mock.assert_called_once_with(
-            ["D:\\Samples"],
+            [str(Path("D:/Samples"))],
             append=False,
             require_clear_draft=False,
             finalize_options={"restore_previous_session_on_cancel": True},
@@ -3460,8 +3460,9 @@ class WorkflowControllerRestoreTests(unittest.TestCase):
         app.data_manager.export_session_to_folder.assert_called_once_with(Path("D:/Library"), parent_widget=app)
 
     def test_staging_session_import_dialogs_point_to_sidecar_database(self):
-        library_actions = Path("../gui/main/actions/library.py").read_text(encoding="utf-8")
-        startup_launcher = Path("../gui/widgets/startup_launcher.py").read_text(encoding="utf-8")
+        _repo = Path(__file__).resolve().parent.parent
+        library_actions = (_repo / "gui" / "main" / "actions" / "library.py").read_text(encoding="utf-8")
+        startup_launcher = (_repo / "gui" / "widgets" / "startup_launcher.py").read_text(encoding="utf-8")
 
         self.assertIn("Unshuffle Session Database (unshuffle.db *.db)", library_actions)
         self.assertIn("Unshuffle Session Database (unshuffle.db *.db)", startup_launcher)

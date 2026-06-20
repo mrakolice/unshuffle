@@ -15,7 +15,7 @@ from gui.widgets.coherence_analyzer import _distance_between_payloads, _distance
 class AudioTypeTests(unittest.TestCase):
     def test_camel_case_loop_detection_still_works(self):
         node = LibNode(
-            path=Path(r"C:\audio\KickLoop01.wav"),
+            path=Path("C:/audio/KickLoop01.wav"),
             name="KickLoop01.wav",
             node_type=NodeType.FILE,
             extension=".wav",
@@ -24,7 +24,7 @@ class AudioTypeTests(unittest.TestCase):
 
     def test_substring_hit_no_longer_overrides_bpm_loop(self):
         node = LibNode(
-            path=Path(r"C:\audio\white_noise_140bpm.wav"),
+            path=Path("C:/audio/white_noise_140bpm.wav"),
             name="white_noise_140bpm.wav",
             node_type=NodeType.FILE,
             extension=".wav",
@@ -33,7 +33,7 @@ class AudioTypeTests(unittest.TestCase):
 
     def test_loopmasters_parent_no_longer_forces_loop(self):
         node = LibNode(
-            path=Path(r"C:\audio\Loopmasters\mystery.wav"),
+            path=Path("C:/audio/Loopmasters/mystery.wav"),
             name="mystery.wav",
             node_type=NodeType.FILE,
             extension=".wav",
@@ -42,7 +42,7 @@ class AudioTypeTests(unittest.TestCase):
 
     def test_parent_loop_folder_without_oneshot_hint_classifies_as_loop(self):
         node = LibNode(
-            path=Path(r"C:\audio\Loops\mystery.wav"),
+            path=Path("C:/audio/Loops/mystery.wav"),
             name="mystery.wav",
             node_type=NodeType.FILE,
             extension=".wav",
@@ -51,7 +51,7 @@ class AudioTypeTests(unittest.TestCase):
 
     def test_parent_loop_folder_with_token_oneshot_hint_stays_loop_after_soft_malus(self):
         node = LibNode(
-            path=Path(r"C:\audio\Loops\kick.wav"),
+            path=Path("C:/audio/Loops/kick.wav"),
             name="kick.wav",
             node_type=NodeType.FILE,
             extension=".wav",
@@ -60,7 +60,7 @@ class AudioTypeTests(unittest.TestCase):
 
     def test_parent_loop_folder_with_substring_oneshot_hint_is_not_malus_candidate(self):
         node = LibNode(
-            path=Path(r"C:\audio\Loops\sidekick.wav"),
+            path=Path("C:/audio/Loops/sidekick.wav"),
             name="sidekick.wav",
             node_type=NodeType.FILE,
             extension=".wav",
@@ -82,7 +82,7 @@ class AudioTypeTests(unittest.TestCase):
             "model_numbers": set(),
         }
         node = LibNode(
-            path=Path(r"C:\audio\kick_bass.wav"),
+            path=Path("C:/audio/kick_bass.wav"),
             name="kick_bass.wav",
             node_type=NodeType.FILE,
             extension=".wav",

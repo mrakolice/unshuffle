@@ -28,7 +28,7 @@ jobs:
         pip install -e .
     - name: Install Qt system dependencies
       if: runner.os == 'Linux'
-      run: sudo apt-get install -y libegl1
+      run: sudo apt-get install -y libegl1 libpulse0
     - name: Test with pytest
       run: |
         python -m pytest -q

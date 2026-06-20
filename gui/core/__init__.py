@@ -26,7 +26,6 @@ from .filter_query import (
     tree_skip_fields,
 )
 from .reorg_manager import ReorgManager
-from .audio_controller import AudioController
 from .settings_controller import SettingsController, create_app_settings
 from .search_controller import SearchController
 from .workflow_controller import WorkflowController
@@ -42,7 +41,6 @@ from . import main_window_scan_flow
 
 __all__ = [
     "AcousticController",
-    "AudioController",
     "CommitWorker",
     "CoherenceController",
     "CoherenceWorker",

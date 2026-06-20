@@ -16,7 +16,7 @@ def test_runtime_config_snapshot_includes_metadata_centralization_fields():
 
 def test_detect_audio_type_uses_runtime_oneshot_hint_tokens():
     node = LibNode(
-        path=Path(r"C:\audio\Long\kick_tail.wav"),
+        path=Path("C:/audio/Long/kick_tail.wav"),
         name="kick_tail.wav",
         node_type=NodeType.FILE,
         extension=".wav",
@@ -39,7 +39,7 @@ def test_detect_audio_type_uses_runtime_oneshot_hint_tokens():
 
 def test_detect_audio_type_ignores_non_numeric_feature_scores():
     node = LibNode(
-        path=Path(r"C:\audio\Long\texture.wav"),
+        path=Path("C:/audio/Long/texture.wav"),
         name="texture.wav",
         node_type=NodeType.FILE,
         extension=".wav",
@@ -54,7 +54,7 @@ def test_detect_audio_type_ignores_non_numeric_feature_scores():
 
 def test_classify_node_uses_runtime_percussive_categories_for_duration_penalty():
     node = LibNode(
-        path=Path(r"C:\audio\folder\kick.wav"),
+        path=Path("C:/audio/folder/kick.wav"),
         name="kick.wav",
         node_type=NodeType.FILE,
         extension=".wav",
@@ -72,7 +72,7 @@ def test_classify_node_uses_runtime_percussive_categories_for_duration_penalty()
 
 def test_classify_node_rebuilds_scoring_engine_when_runtime_aliases_change():
     node = LibNode(
-        path=Path(r"C:\audio\folder\foo.wav"),
+        path=Path("C:/audio/folder/foo.wav"),
         name="foo.wav",
         node_type=NodeType.FILE,
         extension=".wav",
@@ -97,7 +97,7 @@ def test_classify_node_rebuilds_scoring_engine_when_runtime_aliases_change():
 
 def test_classify_node_clamps_negative_noise_floor_confidence():
     node = LibNode(
-        path=Path(r"C:\audio\folder\plain.wav"),
+        path=Path("C:/audio/folder/plain.wav"),
         name="plain.wav",
         node_type=NodeType.FILE,
         extension=".wav",
@@ -153,7 +153,7 @@ def test_load_config_skips_non_string_taxonomy_category(tmp_path, monkeypatch):
 
 def test_classify_node_keeps_full_drums_loop_exclusive():
     node = LibNode(
-        path=Path(r"C:\audio\kit\beat.wav"),
+        path=Path("C:/audio/kit/beat.wav"),
         name="beat.wav",
         node_type=NodeType.FILE,
         extension=".wav",
@@ -172,7 +172,7 @@ def test_classify_node_keeps_full_drums_loop_exclusive():
 
 def test_classify_node_does_not_short_circuit_tied_filename_scores():
     node = LibNode(
-        path=Path(r"C:\audio\Snares\HitBoy Snare.wav"),
+        path=Path("C:/audio/Snares/HitBoy Snare.wav"),
         name="HitBoy Snare.wav",
         node_type=NodeType.FILE,
         extension=".wav",
@@ -210,7 +210,7 @@ def test_key_fallback_bass_hint_uses_tokens_not_substrings():
     try:
         for name, expected in cases.items():
             node = LibNode(
-                path=Path(r"C:\audio\Mystery") / name,
+                path=Path("C:/audio/Mystery") / name,
                 name=name,
                 node_type=NodeType.FILE,
                 extension=".wav",
@@ -226,7 +226,7 @@ def test_unweighted_learned_correction_is_ignored():
     runtime["alias_table"] = {}
     runtime["category_suppression_rules"] = {}
     node = LibNode(
-        path=Path(r"C:\audio\Pharaoh Premium Drum Samples (BETA)\Cymatics - Agony - 115 BPM C Min.wav"),
+        path=Path("C:/audio/Pharaoh Premium Drum Samples (BETA)/Cymatics - Agony - 115 BPM C Min.wav"),
         name="Cymatics - Agony - 115 BPM C Min.wav",
         node_type=NodeType.FILE,
         extension=".wav",

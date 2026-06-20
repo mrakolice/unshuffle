@@ -9,7 +9,6 @@ import shiboken6
 from unshuffle.core.constants import APP_NAME, APP_VERSION
 from ..core import (
     AcousticController,
-    AudioController,
     DataManager,
     DraftingController,
     FilterController,
@@ -111,6 +110,7 @@ class ModernApp(QMainWindow):
         apply_minimum_width(self, WINDOW_MIN_WIDTH)
         apply_minimum_height(self, WINDOW_MIN_HEIGHT)
         self.library_tab.set_proxy_model(self.proxy_model)
+        from ..core.audio_controller import AudioController
         self.audio_controller = AudioController(self.audio_bar, self)
         self._native_theme_filter = _NativeWindowThemeFilter(self)
         app = QApplication.instance()
