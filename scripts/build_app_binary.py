@@ -13,6 +13,7 @@ ASSET_PATHS = (
     ("data/anchors", "data/anchors"),
     ("data/metadata", "data/metadata"),
     ("data/taxonomy", "data/taxonomy"),
+    ("gui/styles/themes", "gui/styles/themes"),
     ("icons", "icons"),
     ("bin", "bin"),
 )
@@ -85,6 +86,10 @@ def pyinstaller_command(
         "numpy",
         "--collect-submodules",
         "numpy",
+        "--collect-all",
+        "backports",
+        "--hidden-import",
+        "backports.tarfile",
     ]
     if clean:
         command.append("--clean")

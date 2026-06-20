@@ -10,14 +10,7 @@ on:
       - "docs/**"
       - "icons/**"
       - "bin/**"
-      - "scripts/build_app_binary.py"
-      - "scripts/app_binary_entrypoint.py"
-      - "scripts/build_windows_installer.ps1"
-      - "scripts/build_macos_dmg.sh"
-      - "scripts/build_macos_pkg.sh"
-      - "scripts/prepare_macos_icon.sh"
-      - "scripts/build_linux_deb.py"
-      - "scripts/check_native_extractor_bundle.py"
+      - "scripts/**"
       - "packaging/**"
       - "pyproject.toml"
       - "requirements*.txt"
@@ -41,8 +34,10 @@ jobs:
             artifact_path: dist/installer/Unshuffle-macos.pkg
           - platform: linux
             runner: ubuntu-latest
-            artifact_name: unshuffle-linux-deb
-            artifact_path: dist/installer/unshuffle_1.0.0_amd64.deb
+            artifact_name: unshuffle-linux-artifacts
+            artifact_path: |
+              dist/installer/*.deb
+              dist/installer/*.AppImage
 
     steps:
       - uses: actions/checkout@v4
@@ -64,9 +59,24 @@ jobs:
         if: matrix.platform == 'macos'
         run: brew install ffmpeg
 
-      - name: Install Linux audio tooling
+      - name: Install Linux runtime tooling
         if: matrix.platform == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ffmpeg \
+            libegl1 \
+            libgl1 \
+            libxkbcommon-x11-0 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0
 
       - name: Build current-platform native extractor
         run: python scripts/build_native_extractor.py --copy-to-bin
@@ -81,6 +91,21 @@ jobs:
       - name: Build app binary
         run: python scripts/build_app_binary.py
 
+      - name: Smoke test Linux app binary startup
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          set +e
+          output="$(dist/Unshuffle/Unshuffle 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          if [ "$status" -ne 1 ]; then
+            echo "Expected headless Linux smoke test to exit with status 1, got $status" >&2
+            exit 1
+          fi
+          grep -F "Unshuffle GUI requires a graphical desktop session on Linux" <<< "$output"
+
       - name: Build Windows installer
         if: matrix.platform == 'windows'
         shell: pwsh
@@ -93,6 +118,13 @@ jobs:
       - name: Build Linux deb package
         if: matrix.platform == 'linux'
         run: python scripts/build_linux_deb.py --version "1.0.0"
+
+      - name: Build Linux AppImage
+        if: matrix.platform == 'linux'
+        run: |
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O bin/linux/appimagetool-x86_64.AppImage
+          chmod +x bin/linux/appimagetool-x86_64.AppImage
+          python scripts/build_linux_appimage.py --version "1.0.0"
 
       - name: Upload installable artifact
         uses: actions/upload-artifact@v4

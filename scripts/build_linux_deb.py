@@ -9,6 +9,21 @@ from pathlib import Path
 APP_NAME = "Unshuffle"
 PACKAGE_NAME = "unshuffle"
 MAINTAINER = "UmU"
+LINUX_RUNTIME_DEPENDS = (
+    "ffmpeg",
+    "libegl1",
+    "libgl1",
+    "libxkbcommon-x11-0",
+    "libxcb-cursor0",
+    "libxcb-icccm4",
+    "libxcb-image0",
+    "libxcb-keysyms1",
+    "libxcb-randr0",
+    "libxcb-render-util0",
+    "libxcb-shape0",
+    "libxcb-xfixes0",
+    "libxcb-xinerama0",
+)
 
 
 def _copy_tree(source: Path, destination: Path) -> None:
@@ -42,6 +57,7 @@ Section: utils
 Priority: optional
 Architecture: {arch}
 Maintainer: {MAINTAINER}
+Depends: {", ".join(LINUX_RUNTIME_DEPENDS)}
 Description: Producer-first sample-library staging and migration tool.
 """
     _write_text(package_root / "DEBIAN" / "control", control)

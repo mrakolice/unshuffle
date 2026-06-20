@@ -39,6 +39,7 @@ def test_app_binary_builder_wraps_gui_launcher_and_assets(monkeypatch) -> None:
             "anchors",
             "metadata",
             "taxonomy",
+            "themes",
             "icons",
             "bin",
             "app_logo.ico",
@@ -71,6 +72,12 @@ def test_app_binary_builder_wraps_gui_launcher_and_assets(monkeypatch) -> None:
     assert ["--collect-submodules", "numpy"] == command[
         command.index("--collect-submodules"):command.index("--collect-submodules") + 2
     ]
+    assert ["--collect-all", "backports"] == command[
+        command.index("--collect-all"):command.index("--collect-all") + 2
+    ]
+    assert ["--hidden-import", "backports.tarfile"] == command[
+        command.index("--hidden-import"):command.index("--hidden-import") + 2
+    ]
     assert ["--icon", str(repo_root / "icons" / "app_logo.ico")] == command[command.index("--icon"):command.index("--icon") + 2]
     assert ["--distpath", str(repo_root / "release-dist")] == command[command.index("--distpath"):command.index("--distpath") + 2]
     add_data_values = [
@@ -82,9 +89,23 @@ def test_app_binary_builder_wraps_gui_launcher_and_assets(monkeypatch) -> None:
     assert str(repo_root / "data" / "anchors") + ";data/anchors" in add_data_values
     assert str(repo_root / "data" / "metadata") + ";data/metadata" in add_data_values
     assert str(repo_root / "data" / "taxonomy") + ";data/taxonomy" in add_data_values
+    assert str(repo_root / "gui" / "styles" / "themes") + ";gui/styles/themes" in add_data_values
     assert str(repo_root / "icons") + ";icons" in add_data_values
     assert str(repo_root / "bin") + ";bin" in add_data_values
     assert str(repo_root / "data") + ";data" not in add_data_values
+
+
+def test_app_binary_builder_collects_backports_tarfile_for_pyinstaller_runtime_hook() -> None:
+    from scripts import build_app_binary
+
+    command = build_app_binary.pyinstaller_command(Path("repo"))
+
+    assert ["--collect-all", "backports"] == command[
+        command.index("--collect-all"):command.index("--collect-all") + 2
+    ]
+    assert ["--hidden-import", "backports.tarfile"] == command[
+        command.index("--hidden-import"):command.index("--hidden-import") + 2
+    ]
 
 
 def test_app_binary_builder_uses_platform_icons(monkeypatch) -> None:
@@ -149,8 +170,12 @@ def test_linux_deb_builder_writes_desktop_launcher_and_icon(tmp_path, monkeypatc
     assert (package_root / "opt" / "unshuffle" / "Unshuffle").exists()
     assert (package_root / "usr" / "bin" / "unshuffle").read_text(encoding="utf-8").startswith("#!/usr/bin/env sh")
     desktop_text = (package_root / "usr" / "share" / "applications" / "unshuffle.desktop").read_text(encoding="utf-8")
+    control_text = (package_root / "DEBIAN" / "control").read_text(encoding="utf-8")
     assert "Name=Unshuffle" in desktop_text
     assert "Icon=unshuffle" in desktop_text
+    assert "Depends: ffmpeg, libegl1, libgl1, libxkbcommon-x11-0" in control_text
+    assert "libxcb-cursor0" in control_text
+    assert "libxcb-xinerama0" in control_text
     assert (package_root / "usr" / "share" / "icons" / "hicolor" / "256x256" / "apps" / "unshuffle.png").exists()
     assert deb_path == repo_root / "dist" / "installer" / "unshuffle_1.0.0_amd64.deb"
     assert calls == [
@@ -186,12 +211,34 @@ def test_app_binary_workflow_uploads_installable_platform_artifacts() -> None:
 
     assert "dist/installer/UnshuffleWinSetup.exe" in workflow
     assert "dist/installer/Unshuffle-macos.pkg" in workflow
-    assert "dist/installer/unshuffle_1.0.0_amd64.deb" in workflow
+    assert "dist/installer/*.deb" in workflow
+    assert "dist/installer/*.AppImage" in workflow
     assert "choco install innosetup" in workflow
     assert "brew install ffmpeg" in workflow
-    assert "sudo apt-get update && sudo apt-get install -y ffmpeg" in workflow
+    assert "Install Linux runtime tooling" in workflow
+    assert "sudo apt-get install -y \\" in workflow
+    assert "ffmpeg" in workflow
+    assert "libegl1" in workflow
+    assert "libxkbcommon-x11-0" in workflow
+    assert "libxcb-cursor0" in workflow
+    assert "libxcb-xinerama0" in workflow
     assert "bash scripts/build_macos_pkg.sh" in workflow
     assert "python scripts/build_linux_deb.py" in workflow
+    assert "python scripts/build_linux_appimage.py" in workflow
+    assert "Smoke test Linux app binary startup" in workflow
+    assert "dist/Unshuffle/Unshuffle" in workflow
+    assert "Unshuffle GUI requires a graphical desktop session on Linux" in workflow
+
+
+def test_release_build_dependencies_include_backports_tarfile() -> None:
+    repo = Path(__file__).resolve().parent.parent
+    requirements_dev = (repo / "requirements-dev.txt").read_text(encoding="utf-8")
+    pyproject = (repo / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert "pyinstaller>=6.11,<7" in requirements_dev
+    assert "backports.tarfile>=1.2,<2" in requirements_dev
+    assert '"pyinstaller>=6.11,<7"' in pyproject
+    assert '"backports.tarfile>=1.2,<2"' in pyproject
 
 
 def test_platform_packages_use_cropped_circular_app_logo() -> None:
@@ -215,3 +262,37 @@ def test_cropped_app_logo_fills_icon_canvas() -> None:
         height = bbox[3] - bbox[1]
         assert width / image.width >= 0.90
         assert height / image.height >= 0.90
+
+
+def test_linux_appimage_builder_writes_apprun_desktop_and_icon(tmp_path, monkeypatch) -> None:
+    from scripts import build_linux_appimage
+
+    repo_root = tmp_path / "repo"
+    source_dir = repo_root / "dist" / "Unshuffle"
+    icon_dir = repo_root / "icons"
+    source_dir.mkdir(parents=True)
+    icon_dir.mkdir()
+    (source_dir / "Unshuffle").write_text("binary", encoding="utf-8")
+    (icon_dir / "app_logo.png").write_bytes(b"png")
+
+    calls = []
+
+    def fake_run(command: list[str], env: dict[str, str], check: bool) -> None:
+        calls.append((command, env, check))
+
+    monkeypatch.setattr(build_linux_appimage.subprocess, "run", fake_run)
+    monkeypatch.setattr(build_linux_appimage, "find_appimagetool", lambda *args: Path("/mock/appimagetool"))
+
+    appimage_path = build_linux_appimage.build_appimage(
+        repo_root,
+        version="1.0.0",
+        source_dir=Path("dist") / "Unshuffle",
+        output_dir=repo_root / "dist" / "installer",
+    )
+
+    appimage_name = "Unshuffle-1.0.0-x86_64.AppImage"
+    assert appimage_path == repo_root / "dist" / "installer" / appimage_name
+    assert len(calls) == 1
+    assert calls[0][0] == ["\\mock\\appimagetool" if sys.platform == "win32" else "/mock/appimagetool", str(repo_root / "dist" / "installer" / "AppDir"), str(appimage_path)]
+    assert calls[0][1].get("ARCH") == "x86_64"
+
