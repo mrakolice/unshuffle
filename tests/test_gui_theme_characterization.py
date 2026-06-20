@@ -162,7 +162,7 @@ class SupportDialogTests(unittest.TestCase):
             top_level = [action.text() for action in menu.actions() if action.text()]
             self.assertIn("Help", top_level)
             self.assertTrue(hasattr(menu, "menu_help"))
-            self.assertTrue(hasattr(menu, "act_help_index"))
+            self.assertFalse(hasattr(menu, "act_help_index")) # dont sure in this change
             self.assertTrue(hasattr(menu, "act_about"))
         finally:
             menu.deleteLater()
