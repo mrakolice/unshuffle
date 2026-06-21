@@ -5,7 +5,7 @@ import sqlite3
 import time
 
 from . import connection
-from .schema import initialize_v1_schema
+from .schema.schema import initialize_v1_schema
 
 
 def log_foreign_key_integrity(db) -> None:

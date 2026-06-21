@@ -493,7 +493,7 @@ class PersistenceTests(unittest.TestCase):
                 db.close()
 
     def test_legacy_file_cache_schema_gets_current_metadata_columns(self):
-        from unshuffle.persistence.schema import initialize_v1_schema
+        from unshuffle.persistence.schema.schema import initialize_v1_schema
 
         with tempfile.TemporaryDirectory() as tmp:
             db_path = Path(tmp) / "legacy_cache.db"
