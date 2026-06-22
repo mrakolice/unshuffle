@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 - 2026-06-22
+
+- Fix play/pause icon swap logic in `AnimatedIconButton` by checking and rendering dynamic icons set via `setIcon()`.
+- Fix playback rewind on resume in `SoundPreviewPlayer.toggle_play_pause()` when the player is at `EndOfMedia` or has reached its duration.
+- Fix the export icon's mouse grab conflict and "sticky drag" glitch by accepting `LeftButton` mouse press events in `DragOutIconButton` without propagating to the base button.
+- Unify the export icon's drag UX with table and tree views by adding a transparent drag pixmap.
+- Clean up the redundant `setIcon` call on the stop button in `_update_play_pause_icon()`.
+
 ## 1.0.1 - 2026-06-22
 
 - Fix PyInstaller packaging dependency for `backports` namespace packages (resolving Linux launch crash).
