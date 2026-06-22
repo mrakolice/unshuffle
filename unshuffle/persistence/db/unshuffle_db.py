@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from . import (
+from unshuffle.persistence import (
     cache_store,
     coherence_store,
     connection,

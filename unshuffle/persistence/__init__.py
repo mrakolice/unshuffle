@@ -15,7 +15,6 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from ..core import paths as core_paths
 from ..core.paths import (
     DB_FILE_NAME,
     DIRECTORY_DUMP_FILE,
@@ -26,7 +25,7 @@ from ..core.paths import (
     get_system_dir as core_get_system_dir,
     get_trash_dir as core_get_trash_dir,
 )
-from .storage import UnshuffleDB
+from unshuffle.persistence.db.unshuffle_db import UnshuffleDB
 from . import taxonomy_store
 
 

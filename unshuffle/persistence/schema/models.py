@@ -1,4 +1,4 @@
-from peewee import SqliteDatabase, Model, IntegerField, TextField, DateTimeField, FloatField, BlobField, BooleanField
+from peewee import *
 from datetime import datetime
 
 db = SqliteDatabase('')
@@ -66,7 +66,7 @@ class SessionSource(BaseModel):
 
     class Meta:
         table_name = 'session_sources'
-        primary_key = BaseModel.create_composite_pk('session_id', 'source_path')
+        primary_key = CompositeKey('session_id', 'source_path')
         indexes = (
             (('session_id',), False),
         )
@@ -80,7 +80,7 @@ class SessionMetadata(BaseModel):
 
     class Meta:
         table_name = 'session_metadata'
-        primary_key = BaseModel.create_composite_pk('session_id', 'key')
+        primary_key = CompositeKey('session_id', 'key')
         indexes = (
             (('session_id',), False),
         )
@@ -121,7 +121,7 @@ class TokenAdjustment(BaseModel):
 
     class Meta:
         table_name = 'token_adjustments'
-        primary_key = BaseModel.create_composite_pk('token', 'category')
+        primary_key = CompositeKey('token', 'category')
 
 
 class LearnedCorrectionEvent(BaseModel):
@@ -134,7 +134,7 @@ class LearnedCorrectionEvent(BaseModel):
 
     class Meta:
         table_name = 'learned_correction_events'
-        primary_key = BaseModel.create_composite_pk('source_key', 'token', 'old_category', 'new_category')
+        primary_key = CompositeKey('source_key', 'token', 'old_category', 'new_category')
 
 
 class Alias(BaseModel):
@@ -155,7 +155,7 @@ class ConfigList(BaseModel):
 
     class Meta:
         table_name = 'config_lists'
-        primary_key = BaseModel.create_composite_pk('list_type', 'value')
+        primary_key = CompositeKey('list_type', 'value')
 
 
 class Exclusion(BaseModel):
@@ -174,7 +174,7 @@ class SuppressionRule(BaseModel):
 
     class Meta:
         table_name = 'suppression_rules'
-        primary_key = BaseModel.create_composite_pk('suppressor', 'target')
+        primary_key = CompositeKey('suppressor', 'target')
 
 
 class SubTaxonomy(BaseModel):
@@ -185,7 +185,7 @@ class SubTaxonomy(BaseModel):
 
     class Meta:
         table_name = 'sub_taxonomy'
-        primary_key = BaseModel.create_composite_pk('category', 'token')
+        primary_key = CompositeKey('category', 'token')
 
 
 class StagingRecord(BaseModel):
@@ -246,7 +246,7 @@ class CoherenceResult(BaseModel):
 
     class Meta:
         table_name = 'coherence_results'
-        primary_key = BaseModel.create_composite_pk('session_id', 'record_id')
+        primary_key = CompositeKey('session_id', 'record_id')
         indexes = (
             (('session_id',), False),
         )
@@ -272,7 +272,7 @@ class RefinementCandidate(BaseModel):
 
     class Meta:
         table_name = 'refinement_candidates'
-        primary_key = BaseModel.create_composite_pk('session_id', 'candidate_id')
+        primary_key = CompositeKey('session_id', 'candidate_id')
         indexes = (
             (('session_id', 'state'), False),
         )
@@ -301,7 +301,7 @@ class AnchorProfile(BaseModel):
 
     class Meta:
         table_name = 'anchor_profiles'
-        primary_key = BaseModel.create_composite_pk('session_id', 'anchor_id')
+        primary_key = CompositeKey('session_id', 'anchor_id')
         indexes = (
             (('session_id', 'state'), False),
         )
