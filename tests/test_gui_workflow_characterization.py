@@ -663,10 +663,93 @@ class MainWindowDebounceTests(unittest.TestCase):
             def get_library_view_modes(self):
                 return ["table", "tree", "map"]
 
+            def get_high_performance_scan(self):
+                return True
+
         dialog = StartupLauncherDialog(_SettingsController())
         dialog._set_roots([str(Path("C:/Samples"))])
 
         self.assertEqual(dialog.windowTitle(), "Unshuffle Launcher")
+
+    def test_startup_launcher_high_performance_scan_checkbox(self):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PySide6.QtWidgets import QApplication
+        from gui.widgets.startup_launcher import StartupLauncherDialog
+
+        app = QApplication.instance() or QApplication([])
+        assert isinstance(app, QApplication)
+
+        class _Settings:
+            def value(self, _key, default=""):
+                return default
+
+        class _SettingsController:
+            settings = _Settings()
+            def __init__(self):
+                self.saved_val = None
+
+            def get_library_view_modes(self):
+                return ["table", "tree", "map"]
+
+            def get_high_performance_scan(self):
+                return False
+
+            def set_high_performance_scan(self, val):
+                self.saved_val = val
+
+        controller = _SettingsController()
+        dialog = StartupLauncherDialog(controller)
+        
+        # Verify it loads initial value (False)
+        self.assertFalse(dialog.chk_high_performance.isChecked())
+
+        # Toggle it and accept
+        dialog.chk_high_performance.setChecked(True)
+        dialog._accept_launch()
+
+        # Verify it saves value (True)
+        self.assertTrue(controller.saved_val)
+
+    def test_startup_launcher_default_roots_fallbacks(self):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PySide6.QtWidgets import QApplication
+        from gui.widgets.startup_launcher import StartupLauncherDialog
+
+        app = QApplication.instance() or QApplication([])
+        assert isinstance(app, QApplication)
+
+        class _Settings:
+            def __init__(self):
+                self.store = {}
+
+            def value(self, key, default=""):
+                return self.store.get(key, default)
+
+        class _SettingsController:
+            def __init__(self):
+                self.settings = _Settings()
+                self.choice = {}
+
+            def get_library_view_modes(self):
+                return ["table", "tree", "map"]
+
+            def get_high_performance_scan(self):
+                return True
+
+            def get_startup_launcher_last_choice(self):
+                return self.choice
+
+        # Case 1: get_startup_launcher_last_choice is available
+        controller = _SettingsController()
+        controller.choice = {"roots": ["D:/Samples/A", "D:/Samples/B"]}
+        dialog = StartupLauncherDialog(controller)
+        self.assertEqual(dialog._roots(), ("D:/Samples/A", "D:/Samples/B"))
+
+        # Case 2: falls back to last_scan_source if choice is empty
+        controller_fallback = _SettingsController()
+        controller_fallback.settings.store["last_scan_source"] = "D:/Samples/Single"
+        dialog_fallback = StartupLauncherDialog(controller_fallback)
+        self.assertEqual(dialog_fallback._roots(), ("D:/Samples/Single",))
 
     def test_startup_relaunch_reset_restores_normal_window_bounds(self):
         from gui.main import launcher
@@ -3550,7 +3633,10 @@ class WorkflowControllerRestoreTests(unittest.TestCase):
             self.assertTrue(exported)
             self.assertEqual(local_db.foreign_key_violations(), [])
             self.assertEqual(len(local_db.get_staging_records(session_id)), 1)
-            self.assertEqual(local_db.get_session(session_id)["mode"], "pending")
+            session = local_db.get_session(session_id)
+            self.assertIsNotNone(session)
+            if session is not None:
+                self.assertEqual(session["mode"], "pending")
             self.assertEqual(local_db.get_session_records(session_id), [])
             self.assertEqual(
                 local_db.get_session_metadata(session_id, "saved_filters"),
@@ -3735,10 +3821,13 @@ class WorkflowControllerRestoreTests(unittest.TestCase):
             self.assertTrue(imported)
             create_bridge.assert_called_once_with(export_root, session_id=session_id)
             app.set_runtime_context.assert_called_once()
-            self.assertEqual(
-                os.path.normcase(global_db.get_session(session_id)["target_root"]),
-                os.path.normcase(str(export_root)),
-            )
+            session = global_db.get_session(session_id)
+            self.assertIsNotNone(session)
+            if session is not None:
+                self.assertEqual(
+                    os.path.normcase(session["target_root"]),
+                    os.path.normcase(str(export_root)),
+                )
             self.assertEqual([Path(row["source_path"]) for row in global_db.get_staging_records(session_id)], [source])
             app.workflow_controller.handle_scan_finished.assert_called_once()
         finally:

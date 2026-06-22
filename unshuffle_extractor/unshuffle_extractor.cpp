@@ -179,7 +179,7 @@ bool decode_with_ffmpeg_windows(const fs::path &path,
   std::wstring command =
       windows_quote_arg(ffmpeg) + L" -v error -nostdin -i " +
       windows_quote_arg(path.wstring()) +
-      L" -t 60 -ac 1 -ar 44100 -f f32le pipe:1";
+      L" -t 20 -ac 1 -ar 44100 -f f32le pipe:1";
 
   STARTUPINFOW startup_info;
   ZeroMemory(&startup_info, sizeof(startup_info));
@@ -245,7 +245,7 @@ bool decode_with_ffmpeg(const fs::path &path, std::vector<float> &mono_samples,
   std::string command = shell_quote(find_ffmpeg_executable()) +
                         " -v error -nostdin -i " +
                         shell_quote(path_to_utf8(path)) +
-                        " -t 60 -ac 1 -ar 44100 -f f32le pipe:1";
+                        " -t 20 -ac 1 -ar 44100 -f f32le pipe:1";
   FILE *pipe = popen(command.c_str(), "r");
   if (!pipe) {
     std::cerr << "ffmpeg: Failed to start\n";
@@ -413,7 +413,7 @@ int main(int argc, char *argv[]) {
     sampleRate = mp3.sampleRate;
     channels = mp3.channels;
 
-    drmp3_uint64 maxFrames = (drmp3_uint64)sampleRate * 60;
+    drmp3_uint64 maxFrames = (drmp3_uint64)sampleRate * 20;
     drmp3_uint64 totalFrames = drmp3_get_pcm_frame_count(&mp3);
     if (totalFrames == 0)
       totalFrames = maxFrames;
@@ -443,7 +443,7 @@ int main(int argc, char *argv[]) {
     sampleRate = pFlac->sampleRate;
     channels = pFlac->channels;
 
-    drflac_uint64 maxFrames = (drflac_uint64)sampleRate * 60;
+    drflac_uint64 maxFrames = (drflac_uint64)sampleRate * 20;
     drflac_uint64 framesToRead = std::min(pFlac->totalPCMFrameCount, maxFrames);
 
     std::vector<float> samples(framesToRead * channels);
@@ -481,7 +481,7 @@ int main(int argc, char *argv[]) {
     sampleRate = info.sample_rate;
     channels = info.channels;
 
-    int maxFrames = sampleRate * 60;
+    int maxFrames = sampleRate * 20;
     std::vector<float> samples(maxFrames * channels);
 
     int framesRead = stb_vorbis_get_samples_float_interleaved(
@@ -507,7 +507,7 @@ int main(int argc, char *argv[]) {
       sampleRate = wav.sampleRate;
       channels = wav.channels;
 
-      drwav_uint64 maxFrames = (drwav_uint64)sampleRate * 60;
+      drwav_uint64 maxFrames = (drwav_uint64)sampleRate * 20;
       drwav_uint64 totalFrames = wav.totalPCMFrameCount;
 
       if (totalFrames == 0 && fs::file_size(wpath) > 100) {

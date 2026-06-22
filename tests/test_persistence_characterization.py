@@ -841,6 +841,7 @@ class PersistenceTests(unittest.TestCase):
 
     def test_extractor_worker_count_caps_default_and_honors_override(self):
         with mock.patch("os.cpu_count", return_value=64), \
+             mock.patch("unshuffle.core.concurrency.sys.platform", "linux"), \
              mock.patch.dict("os.environ", {}, clear=True):
             self.assertEqual(_extractor_worker_count(20), 8)
             self.assertEqual(_extractor_worker_count(3), 3)
@@ -848,7 +849,23 @@ class PersistenceTests(unittest.TestCase):
         with mock.patch.dict("os.environ", {"UNSHUFFLE_EXTRACTOR_WORKERS": "2"}, clear=True):
             self.assertEqual(_extractor_worker_count(20), 2)
 
+        with mock.patch.dict("os.environ", {"UNSHUFFLE_MAX_SCAN_WORKERS": "3"}, clear=True), \
+             mock.patch("unshuffle.core.concurrency.sys.platform", "linux"), \
+             mock.patch("os.cpu_count", return_value=64):
+            self.assertEqual(_extractor_worker_count(20), 3)
+
+        with mock.patch.dict("os.environ", {
+            "UNSHUFFLE_EXTRACTOR_WORKERS": "2",
+            "UNSHUFFLE_MAX_SCAN_WORKERS": "3",
+        }, clear=True):
+            self.assertEqual(_extractor_worker_count(20), 2)
+
+        with mock.patch("unshuffle.core.concurrency.sys.platform", "darwin"), \
+             mock.patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(_extractor_worker_count(20), 4)
+
         with mock.patch.dict("os.environ", {"UNSHUFFLE_EXTRACTOR_WORKERS": "invalid"}, clear=True), \
+             mock.patch("unshuffle.core.concurrency.sys.platform", "linux"), \
              mock.patch("os.cpu_count", return_value=64):
             self.assertEqual(_extractor_worker_count(20), 8)
 

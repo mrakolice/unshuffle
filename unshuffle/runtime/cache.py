@@ -1,11 +1,12 @@
 import csv
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
 from pathlib import Path
 
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from ..core.concurrency import bounded_map, max_scan_workers
 from ..core.constants import AUDIO_EXTS
 from ..core.hashing import get_file_hash
 from ..core.path_safety import is_symlink_or_reparse
@@ -73,35 +74,31 @@ class CacheMixin:
             self.log(f"Maintenance Complete: {len(self.seen_hashes)} unique hashes added to index.")
             return
 
-        max_workers = min(max(os.cpu_count() or 1, 1), 8, total)
-        pending_metadata = {}
+        max_workers = max_scan_workers(total)
+        max_pending = max_workers * 2
+        self.log(f"Hashing {total} files.")
         completed = 0
         with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="unshuffle-cache") as executor:
-            futures = {}
-            for path, size, mtime in audio_files:
-                future = executor.submit(self._hash_audio_file, path)
-                futures[future] = path
-                pending_metadata[path] = (size, mtime)
-
-            while futures:
+            for (path, size, mtime), file_hash in bounded_map(
+                executor,
+                lambda item: self._hash_audio_file(item[0]),
+                audio_files,
+                max_pending=max_pending,
+                is_interrupted=lambda: self.interrupted,
+            ):
                 if self.interrupted:
-                    executor.shutdown(wait=False, cancel_futures=True)
                     self.log("Rebuild interrupted by user.")
                     break
 
-                done, _pending = wait(tuple(futures), return_when=FIRST_COMPLETED)
-                for future in done:
-                    path = futures.pop(future)
-                    completed += 1
-                    if self.progress_callback:
-                        self.progress_callback({"current": completed, "total": total, "message": f"Hashing: {path.name}"})
-                    file_hash = future.result()
-                    if file_hash:
-                        try:
-                            self.seen_hashes[file_hash] = path.relative_to(self.target_dir).as_posix()
-                        except ValueError:
-                            self.seen_hashes[file_hash] = path.as_posix()
-                        self.seen_hash_metadata[file_hash] = pending_metadata[path]
+                completed += 1
+                if self.progress_callback:
+                    self.progress_callback({"current": completed, "total": total, "message": f"Hashing: {path.name}"})
+                if file_hash:
+                    try:
+                        self.seen_hashes[file_hash] = path.relative_to(self.target_dir).as_posix()
+                    except ValueError:
+                        self.seen_hashes[file_hash] = path.as_posix()
+                    self.seen_hash_metadata[file_hash] = (size, mtime)
 
         self.log(f"Maintenance Complete: {len(self.seen_hashes)} unique hashes added to index.")
 

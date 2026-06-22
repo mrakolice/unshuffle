@@ -475,6 +475,7 @@ def _launch_refresh(window: Any, request: StartupLaunchRequest, app: QApplicatio
             tray.start()
             if hasattr(monitor, "set_cancel_handler"):
                 monitor.set_cancel_handler(_cancel_startup_scan)
+            app.processEvents()
             started = window.workflow_controller.start_scan(
                 roots,
                 append=False,

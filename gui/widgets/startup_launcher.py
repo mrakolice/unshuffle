@@ -152,7 +152,9 @@ class StartupLauncherDialog(QDialog):
 
         bottom = QHBoxLayout()
         self.dont_show = QCheckBox("Don't show again")
+        self.chk_high_performance = QCheckBox("High Performance Scan")
         bottom.addWidget(self.dont_show)
+        bottom.addWidget(self.chk_high_performance)
         bottom.addStretch(1)
         cancel = QPushButton("Cancel")
         cancel.clicked.connect(self.reject)
@@ -213,7 +215,7 @@ class StartupLauncherDialog(QDialog):
             manager.set_zoom(zoom_percent)
             set_zoom_percent(manager.state.zoom_percent)
         sync_color_palette(manager.colors)
-        self._theme_is_dark = bool(manager.colors.is_dark)
+        self._theme_is_dark = manager.colors.is_dark
 
     @staticmethod
     def _color(value: str, alpha: int | None = None) -> str:
@@ -290,6 +292,9 @@ class StartupLauncherDialog(QDialog):
         view_modes = self.settings_controller.get_library_view_modes()
         for mode, check in self.view_checks.items():
             check.setChecked(mode in view_modes)
+        get_high_perf = getattr(self.settings_controller, "get_high_performance_scan", None)
+        high_perf_val = bool(get_high_perf()) if callable(get_high_perf) else True
+        self.chk_high_performance.setChecked(high_perf_val)
         self._set_roots(self._default_roots())
         self._initial_roots = self._roots()
         self._refresh_summary()
@@ -304,10 +309,15 @@ class StartupLauncherDialog(QDialog):
 
     def _default_roots(self) -> list[str]:
         target = self._target()
-        session_id = self._selected_session_id
+        session_id = self._selected_session_id or str(self.settings.value("last_scan_session_id", "") or "")
         roots = load_session_sources(target, session_id) if target and session_id else []
         if roots:
             return roots
+        choice = getattr(self.settings_controller, "get_startup_launcher_last_choice", None)
+        if callable(choice):
+            choice_roots = choice().get("roots", [])
+            if choice_roots:
+                return [str(r) for r in choice_roots if str(r).strip()]
         last_source = str(self.settings.value("last_scan_source", "") or "")
         return [last_source] if last_source else []
 
@@ -403,8 +413,14 @@ class StartupLauncherDialog(QDialog):
             show_launcher_next_time=not self.dont_show.isChecked(),
         )
 
+    def _save_high_performance_scan(self) -> None:
+        set_high_perf = getattr(self.settings_controller, "set_high_performance_scan", None)
+        if callable(set_high_perf):
+            set_high_perf(self.chk_high_performance.isChecked())
+
     def _accept_launch(self) -> None:
         self._request = self._build_request()
+        self._save_high_performance_scan()
         self.accept()
 
     def _import_session_clicked(self) -> None:
@@ -424,6 +440,7 @@ class StartupLauncherDialog(QDialog):
                 import_path=path,
                 show_launcher_next_time=not self.dont_show.isChecked(),
             )
+            self._save_high_performance_scan()
             self.accept()
 
     def _import_csv_clicked(self) -> None:
@@ -438,4 +455,5 @@ class StartupLauncherDialog(QDialog):
                 import_path=path,
                 show_launcher_next_time=not self.dont_show.isChecked(),
             )
+            self._save_high_performance_scan()
             self.accept()

@@ -33,12 +33,15 @@ class ModernMenuBar(QMenuBar):
     historyRequested = Signal()
     systemTaxonomyDryRunRequested = Signal()
     systemTaxonomyRescanRequested = Signal()
+    systemTaxonomyDryRunRequested = Signal()
+    systemTaxonomyRescanRequested = Signal()
     systemTaxonomyResetWeightsRequested = Signal()
     systemTaxonomyRefreshConflictsRequested = Signal()
     systemTaxonomySyncApplyRequested = Signal()
     treeOrganizationEditRequested = Signal()
     checkUpdatesRequested = Signal()
     aboutRequested = Signal()
+    highPerformanceScanRequested = Signal(bool)
     
     libraryAboutToShow = Signal()
     buildAboutToShow = Signal()
@@ -152,6 +155,13 @@ class ModernMenuBar(QMenuBar):
             lambda checked=False: self.showNonAudioAssetsRequested.emit(self.act_show_non_audio.isChecked())
         )
         self.menu_preferences.addAction(self.act_show_non_audio)
+
+        self.act_high_performance_scan = QAction("High Performance Scan", self)
+        self.act_high_performance_scan.setCheckable(True)
+        self.act_high_performance_scan.setChecked(True)
+        self.act_high_performance_scan.triggered.connect(
+            lambda checked=False: self.highPerformanceScanRequested.emit(self.act_high_performance_scan.isChecked())
+        )
 
         self.menu_preferences.addSeparator()
         self.menu_theme = self.menu_preferences.addMenu("Theme")

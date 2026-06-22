@@ -155,6 +155,8 @@ def setup_global_actions(app):
     app.custom_menu_bar.historyRequested.connect(app.open_history_workspace)
     app.custom_menu_bar.checkUpdatesRequested.connect(lambda: app.check_for_updates(manual=True))
     app.custom_menu_bar.aboutRequested.connect(app.show_about)
+    app.custom_menu_bar.highPerformanceScanRequested.connect(app.settings_controller.set_high_performance_scan)
+    app.custom_menu_bar.act_high_performance_scan.setChecked(app.settings_controller.get_high_performance_scan())
     app.system_page.runCoherenceRequested.connect(lambda: app.coherence_controller.start_coherence_audit(force=True, mode="manual"))
     app.system_page.continuousRefinementRequested.connect(app.coherence_controller.start_continuous_refinement)
     app.system_page.autoCheckCoherenceChanged.connect(app.settings_controller.set_auto_check_coherence_on_start)

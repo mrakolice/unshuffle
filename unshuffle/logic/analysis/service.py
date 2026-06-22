@@ -4,6 +4,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
+from ...core.concurrency import bounded_map, max_scan_workers
 from ...core.constants import (
     ALIAS_TABLE,
     CACHE_FILE_NAME,
@@ -407,15 +408,25 @@ def build_node_graph(root_path: Path, context: AnalysisContext) -> LibNode:
         from ...core.hashing import get_file_hash
 
         if len(to_hash) > 50:
+            max_workers = max_scan_workers(len(to_hash))
+            max_pending = max_workers * 2
             if context.progress_callback:
-                context.progress_callback({"message": f"Hashing {len(to_hash)} files (Parallel)..."})
-            paths = [node.path for node in to_hash]
-            max_workers = min(8, max(2, os.cpu_count() or 2), len(to_hash))
+                context.progress_callback({
+                    "message": f"Hashing {len(to_hash)} files.",
+                })
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                hashes = list(executor.map(get_file_hash, paths))
-                if context.is_interrupted():
-                    return context.nodes[root_path]
-                for idx, (node, file_hash) in enumerate(zip(to_hash, hashes), 1):
+                for idx, (node, file_hash) in enumerate(
+                    bounded_map(
+                        executor,
+                        lambda item: get_file_hash(item.path),
+                        to_hash,
+                        max_pending=max_pending,
+                        is_interrupted=context.is_interrupted,
+                    ),
+                    1,
+                ):
+                    if context.is_interrupted():
+                        return context.nodes[root_path]
                     node.hash = file_hash
                     if context.progress_callback and idx % 100 == 0:
                         context.progress_callback({"current": idx, "total": len(to_hash)})

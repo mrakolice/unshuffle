@@ -189,7 +189,7 @@ class SupportDialogTests(unittest.TestCase):
             )
             self.assertTrue(
                 any(
-                    label.objectName() == "AboutSubtitle" and "V1.0.0" in label.text()
+                    label.objectName() == "AboutSubtitle" and "V1.0.1" in label.text()
                     for label in dialog.findChildren(QLabel)
                 )
             )

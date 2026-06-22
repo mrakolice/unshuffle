@@ -181,8 +181,34 @@ def acquire_lock(target_dir: Path, session_id: str, log):
 
             if old_host_id:
                 same_machine = old_host_id == current_host_id
+                if not same_machine:
+                    if "@" in old_host_id and "@" in current_host_id:
+                        old_mac = old_host_id.split("@")[-1]
+                        curr_mac = current_host_id.split("@")[-1]
+                        try:
+                            mac_int = int(curr_mac, 16)
+                            is_hardware = ((mac_int >> 40) & 1) == 0
+                            if is_hardware and old_mac == curr_mac:
+                                same_machine = True
+                                log(
+                                    f"Same machine detected via MAC address {curr_mac} "
+                                    f"(hostname changed from '{old_host}' to '{current_host}').",
+                                    level=logging.INFO,
+                                )
+                        except ValueError:
+                            pass
+                    if not same_machine and old_host and old_host == current_host:
+                        generic_hosts = {"localhost", "127.0.0.1", "localhost.localdomain"}
+                        if old_host not in generic_hosts:
+                            same_machine = True
+                            log(
+                                f"Same machine detected via hostname '{current_host}' "
+                                f"(identity/MAC differed).",
+                                level=logging.INFO,
+                            )
             else:
                 same_machine = not old_host or old_host == current_host
+
 
             if not same_machine:
                 raise RuntimeError(

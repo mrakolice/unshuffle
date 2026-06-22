@@ -19,7 +19,7 @@ Does it happen every time?
 - OS:
 - App build or Python version:
 - Unshuffle version:
-- Source folder type or size:
+- Source folder size:
 
 ## Crash logs
 

@@ -15,6 +15,7 @@ class StartupScanMonitor(QWidget):
 
     def __init__(self):
         super().__init__(None, Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowMinimizeButtonHint)
+        self.setAttribute(Qt.WA_StyledBackground, True)
         apply_app_icon(self)
         self.setWindowTitle("Unshuffle scan")
         self.setFixedSize(scaled_px(400), scaled_px(154))

@@ -30,6 +30,7 @@ class EngineLockTests(unittest.TestCase):
                 data = json.loads(lock_path.read_text(encoding="utf-8"))
                 data["pid"] = os.getpid() + 1000
                 data["hostname"] = "remote-machine"
+                data["host_id"] = "remote-machine@001122334455"
                 lock_path.write_text(json.dumps(data), encoding="utf-8")
 
                 with mock.patch("socket.gethostname", return_value="local-machine"):
@@ -196,6 +197,46 @@ class EngineLockTests(unittest.TestCase):
                 self.assertTrue(legacy.exists())
             finally:
                 release_lock(acquired)
+
+    def test_acquire_lock_fallback_checks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            log = mock.Mock()
+            lock_path = self._lock_dir(target) / "lock.json"
+
+            # Case 1: MAC address matches, hostname changed (e.g. host-old -> host-new)
+            old_lock = {
+                "pid": os.getpid() + 10000,  # Ensure dead/non-existent process
+                "hostname": "host-old",
+                "host_id": "host-old@001122334455",
+                "process_name": "python",
+                "session_id": "session-old",
+                "start_time": "2026-06-21T23:00:00",
+            }
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            lock_path.write_text(json.dumps(old_lock), encoding="utf-8")
+
+            with mock.patch("socket.gethostname", return_value="host-new"), \
+                 mock.patch("unshuffle.runtime.locking._machine_identity", return_value="host-new@001122334455"):
+                acquired = acquire_lock(target, "session-new", log)
+                try:
+                    self.assertTrue(acquired.exists())
+                finally:
+                    release_lock(acquired, log)
+
+            # Case 2: Hostname matches, but host_id MAC differs (e.g. randomized MAC)
+            old_lock["hostname"] = "host-same"
+            old_lock["host_id"] = "host-same@001122334455"
+            lock_path.write_text(json.dumps(old_lock), encoding="utf-8")
+
+            with mock.patch("socket.gethostname", return_value="host-same"), \
+                 mock.patch("unshuffle.runtime.locking._machine_identity", return_value="host-same@ffeeddccbbaa"):
+                acquired = acquire_lock(target, "session-new", log)
+                try:
+                    self.assertTrue(acquired.exists())
+                finally:
+                    release_lock(acquired, log)
+
 
 
 class EngineSessionTests(unittest.TestCase):

@@ -3,10 +3,11 @@ import json
 import os
 from collections import Counter
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from ...audio.acoustic import SimilarityEngine
 from ...audio.metadata import get_audio_duration
+from ...core.concurrency import bounded_map, max_scan_workers
 from ...core.features import (
     CURRENT_EXTRACTOR_VERSION,
     CURRENT_FEATURE_SCHEMA,
@@ -30,8 +31,8 @@ from ...logic.classification import classify_node, compute_component_score, dete
 from ...logic.planning.rules import is_generic_folder
 from ...persistence import get_directory_dump_filename, get_discovery_data_filename, save_json_meta
 
-_T = TypeVar("_T")
 DEFAULT_EXTRACTOR_WORKERS = 8
+CACHE_UPDATE_BATCH_SIZE = 256
 
 
 def _extractor_worker_count(total: int) -> int:
@@ -43,7 +44,7 @@ def _extractor_worker_count(total: int) -> int:
         override = 0
     if override > 0:
         return max(1, min(override, total))
-    return min(max(os.cpu_count() or 1, 1), DEFAULT_EXTRACTOR_WORKERS, total)
+    return max_scan_workers(total, pool_cap=DEFAULT_EXTRACTOR_WORKERS)
 
 
 def _ancestor_candidates(
@@ -91,19 +92,6 @@ def _determine_best_pack(
         for candidate, weight in sorted(adjusted_candidates, key=lambda item: item[1], reverse=True)
     ]
     return best_candidate, pack_candidates
-
-
-def _iter_executor_results(
-    executor: concurrent.futures.Executor,
-    func: Callable[[Any], _T],
-    items: Iterable[Any],
-    is_interrupted: Any = None,
-) -> Iterator[_T]:
-    iterator = executor.map(func, items)
-    for item in iterator:
-        if is_interrupted and is_interrupted():
-            break
-        yield item
 
 
 def _is_audio_file_node(node: LibNode) -> bool:
@@ -281,9 +269,20 @@ def run_plan(
                 sum(len(paths) for paths in extract_dependents.values()),
             )
             max_workers = _extractor_worker_count(len(to_extract))
+            max_pending = max_workers * 2
+            logger.info("Audio feature analysis")
+            if progress_callback:
+                progress_callback({
+                    "message": f"Audio feature analysis extracting {len(to_extract)} files.",
+                })
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                results = list(_iter_executor_results(executor, sim_engine.extract_feature_payload, to_extract, is_interrupted=is_interrupted))
-                for path, payload in zip(to_extract, results):
+                for path, payload in bounded_map(
+                    executor,
+                    sim_engine.extract_feature_payload,
+                    to_extract,
+                    max_pending=max_pending,
+                    is_interrupted=is_interrupted,
+                ):
                     dependent_paths = [path, *extract_dependents.get(path, [])]
                     if payload:
                         vector = payload.vector
@@ -315,6 +314,9 @@ def run_plan(
                                     payload.analysis_status or "ok",
                                     "[]",
                                 ))
+                                if len(cache_updates) >= CACHE_UPDATE_BATCH_SIZE:
+                                    db.update_cache_bulk(cache_updates)
+                                    cache_updates.clear()
                     else:
                         failure_tag = sim_engine.extraction_failure_tag(path)
                         if failure_tag:
@@ -328,11 +330,18 @@ def run_plan(
     if duration_nodes:
         if progress_callback:
             progress_callback({"message": f"Detecting durations for {len(duration_nodes)} files..."})
-        max_workers = max(1, (os.cpu_count() or 1) - 1)
+        max_workers = max_scan_workers(len(duration_nodes))
+        max_pending = max_workers * 2
         paths = [node.path for node in duration_nodes]
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            duration_list = list(_iter_executor_results(executor, get_audio_duration, paths, is_interrupted=is_interrupted))
-            durations.update(dict(zip(paths, duration_list)))
+            for path, duration in bounded_map(
+                executor,
+                get_audio_duration,
+                paths,
+                max_pending=max_pending,
+                is_interrupted=is_interrupted,
+            ):
+                durations[path] = duration
 
     total_items = len(process_nodes)
     if progress_callback:

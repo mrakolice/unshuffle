@@ -105,6 +105,7 @@ def refresh_library_menu(app):
 
     app.custom_menu_bar.menu_library.addSeparator()
     app.custom_menu_bar.menu_library.addAction(app.act_refresh)
+    app.custom_menu_bar.menu_library.addAction(app.custom_menu_bar.act_high_performance_scan)
 
     app.menu_coherence = app.custom_menu_bar.menu_library.addMenu("Library Health")
 

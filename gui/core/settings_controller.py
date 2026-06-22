@@ -20,6 +20,12 @@ RECENT_SEARCHES_KEY = "recent_searches_json"
 SAVED_FILTERS_JSON_KEY = "saved_filters_json"
 SAVED_FILTERS_BY_SESSION_PREFIX = "saved_filters_json_by_session/"
 AUTO_CHECK_COHERENCE_ON_START_KEY = "auto_check_coherence_on_start"
+FOLLOW_SYSTEM_THEME_KEY = "follow_system_theme"
+ZOOM_PERCENT_KEY = "zoom_percent"
+RECENT_SEARCHES_KEY = "recent_searches_json"
+SAVED_FILTERS_JSON_KEY = "saved_filters_json"
+SAVED_FILTERS_BY_SESSION_PREFIX = "saved_filters_json_by_session/"
+AUTO_CHECK_COHERENCE_ON_START_KEY = "auto_check_coherence_on_start"
 CURRENT_PAGE_KEY = "current_page"
 CURRENT_SYSTEM_SECTION_KEY = "current_system_section"
 LIBRARY_VIEW_MODES_KEY = "library_view_modes_json"
@@ -28,6 +34,7 @@ LIBRARY_PAGE_STATE_BY_SESSION_PREFIX = "library_page_state_json_by_session/"
 DEFAULT_LIBRARY_VIEW_MODES = ("table", "tree", "map")
 SHOW_STARTUP_LAUNCHER_KEY = "show_startup_launcher"
 STARTUP_LAUNCHER_LAST_CHOICE_KEY = "startup_launcher_last_choice_json"
+HIGH_PERFORMANCE_SCAN_KEY = "high_performance_scan"
 
 
 def create_app_settings() -> QSettings:
@@ -61,6 +68,8 @@ class SettingsController(QObject):
         super().__init__(parent)
         self.settings = settings
         self.app = parent 
+        # Synchronize environment variable on startup
+        self.set_high_performance_scan(self.get_high_performance_scan())
 
     def build_app_settings_state(self) -> dict:
         explicit_theme = normalize_theme_key(self.settings.value(THEME_KEY, DEFAULT_THEME_KEY))
@@ -81,6 +90,7 @@ class SettingsController(QObject):
             "current_system_section": self.settings.value(CURRENT_SYSTEM_SECTION_KEY, "tree_organization"),
             "library_view_modes": self.get_library_view_modes(),
             "library_page_state": self.get_library_page_state(),
+            "high_performance_scan": self.get_high_performance_scan(),
         }
 
     def load_app_settings(self) -> dict:
@@ -347,3 +357,16 @@ class SettingsController(QObject):
             
         self.save_saved_filters(updated)
         return True
+
+    def get_high_performance_scan(self) -> bool:
+        import sys
+        default_value = sys.platform != "darwin"
+        return self.settings.value(HIGH_PERFORMANCE_SCAN_KEY, default_value, type=bool)
+
+    def set_high_performance_scan(self, enabled: bool) -> None:
+        import os
+        self.settings.setValue(HIGH_PERFORMANCE_SCAN_KEY, enabled)
+        if enabled:
+            os.environ.pop("UNSHUFFLE_MAX_SCAN_WORKERS", None)
+        else:
+            os.environ["UNSHUFFLE_MAX_SCAN_WORKERS"] = "4"

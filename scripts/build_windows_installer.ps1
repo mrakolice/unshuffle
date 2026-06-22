@@ -1,5 +1,5 @@
 param(
-    [string]$AppVersion = "1.0.0",
+    [string]$AppVersion = "1.0.1",
     [string]$SourceDir = "dist\Unshuffle",
     [string]$OutputDir = "dist\installer"
 )
