@@ -322,3 +322,14 @@ def create_indexes(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_refinement_candidates_session_state ON refinement_candidates(session_id, state)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_anchor_profiles_session_state ON anchor_profiles(session_id, state)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_coherence_review_decisions_hash ON coherence_review_decisions(file_hash)")
+
+def ensure_id_fields(conn: sqlite3.Connection) -> None:
+    def columns(table_name: str) -> set[str]:
+        return {row[1] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()}
+
+    records_additions = {
+        "id": f"ALTER TABLE schema_version ADD COLUMN id INTEGER DEFAULT 1",
+    }
+    for name, statement in records_additions.items():
+        if name not in columns('schema_version'):
+            conn.execute(statement)

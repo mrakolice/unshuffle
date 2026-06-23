@@ -5,7 +5,7 @@ import sqlite3
 import time
 
 from . import connection
-from .schema.schema import initialize_v1_schema
+from .schema.schema import initialize_v1_schema, migrations_up
 
 
 def log_foreign_key_integrity(db) -> None:
@@ -23,6 +23,7 @@ def initialize_schema(db, schema_version: int) -> None:
     for attempt in range(5):
         try:
             with db._write_transaction():
+                # migrations_up(db, db.conn)
                 initialize_v1_schema(db.conn, schema_version)
                 from .system_anchor_loader import load_system_anchors
                 db.seed_system_anchors(load_system_anchors())

@@ -24,7 +24,7 @@ class UnshuffleDB:
     SQLite backend for Unshuffle metadata.
     """
 
-    SCHEMA_VERSION = 8
+    SCHEMA_VERSION = 9
 
     def __init__(self, db_path: Path):
         self.db_path = db_path

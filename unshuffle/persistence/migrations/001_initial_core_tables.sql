@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS schema_version
 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     version INTEGER NOT NULL default 0
 );
 

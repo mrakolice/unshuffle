@@ -1,12 +1,12 @@
 from peewee import *
 from datetime import datetime
 
-db = SqliteDatabase('')
+db_proxy = DatabaseProxy()
 
 class BaseModel(Model):
     """All models inherit this to share the database connection."""
     class Meta:
-        database = db
+        database = db_proxy
 
 
 # ============================================================================
@@ -15,7 +15,8 @@ class BaseModel(Model):
 
 class SchemaVersion(BaseModel):
     """Schema version tracking."""
-    version = IntegerField(unique=True, default=0)
+    id = IntegerField(primary_key=True)
+    version = IntegerField(default=0)
 
     class Meta:
         table_name = 'schema_version'
