@@ -1,9 +1,3 @@
-CREATE TABLE IF NOT EXISTS schema_version
-(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    version INTEGER NOT NULL default 0
-);
-
 CREATE TABLE IF NOT EXISTS file_cache
 (
     hash                  TEXT PRIMARY KEY,

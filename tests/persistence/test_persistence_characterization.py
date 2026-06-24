@@ -18,6 +18,7 @@ from unshuffle.core import load_config
 from unshuffle.core.constants import ALIAS_TABLE, get_runtime_config_snapshot
 from unshuffle.persistence import UnshuffleDB
 from unshuffle.persistence import load_json_meta, save_json_meta, sync_full_config
+from unshuffle.persistence.schema.schema import migrations_up
 
 
 class PersistenceTests(unittest.TestCase):
@@ -493,8 +494,6 @@ class PersistenceTests(unittest.TestCase):
                 db.close()
 
     def test_legacy_file_cache_schema_gets_current_metadata_columns(self):
-        from unshuffle.persistence.schema.schema import initialize_v1_schema
-
         with tempfile.TemporaryDirectory() as tmp:
             db_path = Path(tmp) / "legacy_cache.db"
             import sqlite3
@@ -514,8 +513,7 @@ class PersistenceTests(unittest.TestCase):
                     )
                     """
                 )
-                initialize_v1_schema(conn, UnshuffleDB.SCHEMA_VERSION)
-
+                migrations_up(conn)
                 file_cache_cols = {
                     row[1] for row in conn.execute("PRAGMA table_info(file_cache)").fetchall()
                 }

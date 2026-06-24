@@ -23,8 +23,8 @@ def initialize_schema(db, schema_version: int) -> None:
     for attempt in range(5):
         try:
             with db._write_transaction():
-                # migrations_up(db, db.conn)
-                initialize_v1_schema(db.conn, schema_version)
+                migrations_up(db.conn)
+                # initialize_v1_schema(db.conn, schema_version)
                 from .system_anchor_loader import load_system_anchors
                 db.seed_system_anchors(load_system_anchors())
             return
