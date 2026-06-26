@@ -54,7 +54,7 @@ class DiagnosticsTests(unittest.TestCase):
 
         if os.name == "nt":
             completed = subprocess.run(
-                [str(Path.cwd().parent / "bin" / "windows" / "unshuffle_extractor.exe"), "--version"],
+                [str(Path(__file__).parent.parent / "bin" / "windows" / "unshuffle_extractor.exe"), "--version"],
                 capture_output=True,
                 text=True,
                 check=True,
