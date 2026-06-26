@@ -54,6 +54,9 @@ def migrations_up(connection: sqlite3.Connection ) -> None:
         for f in migrations_folder.iterdir() if f.is_file()
     ]
 
+    if not _file_models:
+        return
+
     # old version are greater than new versions
     if (version - _file_models[-1].version) > 0:
         version=_file_models[-1].version
