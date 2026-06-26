@@ -13,38 +13,13 @@ from PySide6.QtCore import QAbstractItemModel, QCoreApplication, QEvent, QObject
 
 from gui.core import main_window_scan_flow
 from gui.utils.ui_helpers import on_undo_stack_changed
+from tests.utils.qt_utils import close_qt_window
 from unshuffle.runtime.engine import RuntimeUnshuffler as Unshuffler
 from unshuffle.core import PlanRecord
 from unshuffle.core.features import FEATURE_VECTOR_SIZE, feature_blob_from_vector
 
 
-def _close_qt_window(window, app=None) -> None:
-    active_app = app or QCoreApplication.instance()
-    if hasattr(window, "_is_closing"):
-        window._is_closing = True
-    if active_app is not None:
-        active_app.processEvents()
-        active_app.processEvents()
-    view_controller = getattr(window, "view_controller", None)
-    timer = getattr(view_controller, "_tree_rebuild_timer", None)
-    if timer is not None:
-        try:
-            timer.stop()
-        except RuntimeError:
-            pass
-    restore_worker = getattr(window, "_restore_session_worker", None)
-    if restore_worker is not None:
-        try:
-            if restore_worker.isRunning():
-                restore_worker.wait(1000)
-        except (AttributeError, RuntimeError):
-            pass
-    window.close()
-    window.deleteLater()
-    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
-    if active_app is not None:
-        active_app.processEvents()
-        active_app.processEvents()
+
 
 
 def tearDownModule() -> None:
@@ -92,7 +67,7 @@ class MainWindowDebounceTests(unittest.TestCase):
         self.assertEqual(request.session_id, "")
         self.assertEqual(request.roots, ("D:/Samples/New Pack",))
         self.assertEqual(request.view_modes, ("table", "tree", "map"))
-        _close_qt_window(dialog, app)
+        close_qt_window(dialog, app)
 
     def test_startup_launcher_uses_theme_without_logo_pixmap(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -127,7 +102,7 @@ class MainWindowDebounceTests(unittest.TestCase):
             self.assertIn(make_qcolor(THEMES[SUNSET_THEME_KEY].surface_card).darker(112).name(), dialog.styleSheet())
             self.assertNotIn("#080d17", dialog.styleSheet().lower())
         finally:
-            _close_qt_window(dialog, app)
+            close_qt_window(dialog, app)
 
     def test_startup_launcher_keeps_light_theme_surface_values_unmodified(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -163,7 +138,7 @@ class MainWindowDebounceTests(unittest.TestCase):
             )
             self.assertIn("QPushButton[launcherPanelButton=\"true\"]:hover", style)
         finally:
-            _close_qt_window(dialog, app)
+            close_qt_window(dialog, app)
 
     def test_startup_launcher_force_refresh_keeps_roots_but_clears_restore(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -193,7 +168,7 @@ class MainWindowDebounceTests(unittest.TestCase):
         self.assertEqual(request.mode, "refresh")
         self.assertEqual(request.session_id, "")
         self.assertEqual(request.roots, ("D:/Music/Drum Kits",))
-        _close_qt_window(dialog, app)
+        close_qt_window(dialog, app)
 
     def test_startup_tray_notice_waits_until_monitor_is_hidden(self):
         from gui.widgets import startup_tray
@@ -1686,7 +1661,7 @@ class MainWindowDebounceTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_unknown_system_section_restores_to_current_default(self):
         from gui.main import window as window_module
@@ -1813,7 +1788,7 @@ class MainWindowDebounceTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_saved_docked_mode_restores_dock_view_after_page_restore(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -1846,7 +1821,7 @@ class MainWindowDebounceTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_system_default_section_is_tree_organization_when_available(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -1964,7 +1939,7 @@ class MainWindowDebounceTests(unittest.TestCase):
         self.assertIs(window.build_page, first_page)
         self.assertEqual(window.stack.addWidget.call_count, 1)
         self.assertEqual(window.stack.setCurrentWidget.call_count, 2)
-        _close_qt_window(first_page, app)
+        close_qt_window(first_page, app)
 
     def test_current_page_is_not_persisted_before_settings_restore(self):
         from gui.main import window as window_module
@@ -2005,7 +1980,7 @@ class MainWindowDebounceTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_confidence_range_min_restore_resets_on_startup(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -2032,7 +2007,7 @@ class MainWindowDebounceTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
             settings.remove("classification_range_min")
             settings.remove("classification_range_max")
             settings.remove("last_scan_session_id")
@@ -4339,7 +4314,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                 ]
             )
         finally:
-            _close_qt_window(page, app)
+            close_qt_window(page, app)
 
     def test_coherence_analyzer_refresh_failure_sets_safe_status(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4356,7 +4331,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
             self.assertEqual(page.status.text(), "Sound map could not be refreshed.")
             self.assertEqual(page._records, [])
         finally:
-            _close_qt_window(page, app)
+            close_qt_window(page, app)
 
     def test_coherence_projection_falls_back_when_spatial_index_fails(self):
         from gui.widgets.coherence_view_model import AnalyzerPoint
@@ -4401,7 +4376,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_confidence_slider_populates_and_clears_search_token(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4422,7 +4397,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_sync_type_filter_state_normalizes_both_types_to_all(self):
         from gui.main.window import ModernApp
@@ -4453,7 +4428,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
 
             self.assertEqual(changes, [0])
         finally:
-            _close_qt_window(bar, app)
+            close_qt_window(bar, app)
 
     def test_sort_change_reorders_model_records(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4504,7 +4479,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_scan_reset_helper_clears_search_sort_category_and_confidence(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4532,7 +4507,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_search_sync_refreshes_save_button_and_sort_sidebar_state(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4560,7 +4535,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_library_sidebar_places_options_after_lists(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4596,7 +4571,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_library_docked_and_build_search_rows_use_uniform_control_heights(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4635,7 +4610,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_type_toggle_uses_uniform_button_sizing_and_label(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4657,7 +4632,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_docked_source_filter_sync_keeps_filter_carousel_active(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4686,7 +4661,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_oneshot_type_filter_hides_loop_exclusive_categories(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4716,7 +4691,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_library_view_menu_controls_toggle_and_prewarm(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4757,7 +4732,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_library_map_is_created_lazily_when_enabled_and_opened(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4784,7 +4759,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_library_table_column_visibility_persistence(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -4846,7 +4821,7 @@ class ViewControllerAndMainWindowStateTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            _close_qt_window(window, app)
+            close_qt_window(window, app)
 
     def test_default_hidden_columns_ignore_stale_visible_settings_without_user_marker(self):
         from gui.widgets.library_columns import load_column_visibility, save_column_visibility
