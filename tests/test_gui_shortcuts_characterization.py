@@ -10,6 +10,7 @@ from gui.models.proxy import MultiFilterProxyModel
 from gui.models.staging_table import StagingTableModel
 from gui.utils.constants import StagingColumn
 from gui.views.staging_table import StagingTableView
+from tests.utils.qt_utils import close_qt_window
 from unshuffle.core import PlanRecord
 
 
@@ -414,4 +415,5 @@ class MainWindowShortcutTests(unittest.TestCase):
                     window.engine.close()
                 except Exception:
                     pass
-            window.close()
+
+            close_qt_window(window, app)
