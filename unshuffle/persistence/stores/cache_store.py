@@ -13,22 +13,8 @@ from unshuffle.core.features import (
 )
 from unshuffle.persistence.schema.enums import RecordStepStatus, RecordStatus
 from unshuffle.persistence.schema.models import db_proxy, FileCache, Record
+from unshuffle.persistence.utils.thread_aware_sqlite_database import ThreadAwareSqliteDatabase
 
-class ThreadAwareSqliteDatabase(SqliteDatabase):
-    def __init__(self, get_connection: Callable[[], sqlite3.Connection]):
-        self._get_connection = get_connection
-        super().__init__(':memory:') # not real file for hacking InterfaceError
-
-    def _connect(self):
-        return self._get_connection()
-
-    def close(self):
-        # lifecycle in UnshuffleDB, not here
-        pass
-
-    def close_all(self):
-        # lifecycle in UnshuffleDB, not here
-        pass
 
 class CacheStore(ABC):
     @abstractmethod
@@ -224,10 +210,10 @@ class SqliteCacheStore(CacheStore):
         return list(schema) == list(CURRENT_VECTOR_SCHEMA)
 
 class PeeweeCacheStore(SqliteCacheStore):
-    def __init__(self, get_connection: Callable[[], sqlite3.Connection]):
-        self._db = ThreadAwareSqliteDatabase(get_connection)
+    def __init__(self, connection: sqlite3.Connection):
+        self._db = ThreadAwareSqliteDatabase(connection)
         db_proxy.initialize(self._db)
-        super().__init__(get_connection())
+        super().__init__(connection)
 
     def get_all_hashes(self) -> dict[str, str]:
         return {x.hash: x.last_path for x in FileCache.select()}
