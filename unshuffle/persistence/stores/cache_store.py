@@ -1,10 +1,10 @@
 import json
 import sqlite3
 from abc import ABC, abstractmethod
-from typing import Optional, Callable
+from typing import Optional
 
 from pathlib import Path
-from peewee import SqliteDatabase, fn
+from peewee import fn
 
 from unshuffle.core.features import (
     CURRENT_EXTRACTOR_VERSION,
@@ -12,8 +12,8 @@ from unshuffle.core.features import (
     CURRENT_VECTOR_SCHEMA,
 )
 from unshuffle.persistence.schema.enums import RecordStepStatus, RecordStatus
-from unshuffle.persistence.schema.models import db_proxy, FileCache, Record
-from unshuffle.persistence.utils.thread_aware_sqlite_database import ThreadAwareSqliteDatabase
+from unshuffle.persistence.schema.models import FileCache, Record
+from unshuffle.persistence.utils.thread_aware_sqlite_database import PeeweeStore
 
 
 class CacheStore(ABC):
@@ -209,10 +209,9 @@ class SqliteCacheStore(CacheStore):
             return False
         return list(schema) == list(CURRENT_VECTOR_SCHEMA)
 
-class PeeweeCacheStore(SqliteCacheStore):
+class PeeweeCacheStore(SqliteCacheStore, PeeweeStore):
     def __init__(self, connection: sqlite3.Connection):
-        self._db = ThreadAwareSqliteDatabase(connection)
-        db_proxy.initialize(self._db)
+        self._initialize_db_proxy(connection)
         super().__init__(connection)
 
     def get_all_hashes(self) -> dict[str, str]:
