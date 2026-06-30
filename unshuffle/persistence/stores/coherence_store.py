@@ -1,3 +1,4 @@
+import abc
 import json
 import sqlite3
 from typing import Any, Optional
@@ -9,6 +10,15 @@ from unshuffle.core.features import vector_from_blob
 
 REMOVED_VERIFIED_ANCHOR_SESSION = "__removed_verified_anchors__"
 
+class CoherenceStore(abc.ABC):
+    pass
+
+class SqliteCoherenceStore(CoherenceStore):
+    def __init__(self, connection):
+        self._connection = connection
+
+class PeeweeCoherenceStore(CoherenceStore):
+    pass
 
 def _normalized_source_path(value: Any) -> str:
     return Path(str(value or "")).as_posix()

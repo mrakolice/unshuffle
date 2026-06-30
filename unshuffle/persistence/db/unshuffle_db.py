@@ -5,14 +5,17 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from unshuffle.core import get_config
 from unshuffle.persistence import (
     connection,
 )
 from unshuffle.persistence.storages import storage_taxonomy, storage_lifecycle, storage_coherence, storage_learning, \
     storage_sessions, storage_maintenance
 from unshuffle.persistence.stores.cache_store import SqliteCacheStore, PeeweeCacheStore
+from unshuffle.persistence.stores.coherence_store import SqliteCoherenceStore, PeeweeCoherenceStore
 from unshuffle.persistence.utils import cache_utils
 from unshuffle.persistence.utils.cache_utils import normalize_cache_rows, cache_row
+from unshuffle.persistence.utils.enums import StoreName, DatabaseDriver
 
 
 class UnshuffleDB:
@@ -22,6 +25,22 @@ class UnshuffleDB:
 
     SCHEMA_VERSION = 9
 
+    _migration_config = {
+        StoreName.CACHE: {
+            DatabaseDriver.PEEWEE: PeeweeCacheStore,
+            DatabaseDriver.SQLITE: SqliteCacheStore
+        },
+        StoreName.COHERENCE: {
+            DatabaseDriver.PEEWEE: PeeweeCoherenceStore,
+            DatabaseDriver.SQLITE: SqliteCoherenceStore
+        },
+        StoreName.LEARNING: {},
+        StoreName.LIFECYCLE: {},
+        StoreName.MAINTENANCE: {},
+        StoreName.SESSIONS: {},
+        StoreName.TAXONOMY: {}
+    }
+
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self._connections: Set[sqlite3.Connection] = set()
@@ -30,9 +49,23 @@ class UnshuffleDB:
         self._write_lock = threading.RLock()
         self._closed = False
         self._initialize_schema()
-        self._cache_store = PeeweeCacheStore(self.conn)
+
+        # migration logic, would be deleted after full migration to peewee
+        self._init_stores()
+
         if os.environ.get("UNSHUFFLE_DB_FOREIGN_KEY_CHECK", "0") == "1":
             self._log_foreign_key_integrity()
+
+    def _init_stores(self):
+        store_migration_config = get_config().get("STORE_MIGRATION", {})
+
+        self._cache_store = self._migration_config.get(StoreName.CACHE).get(
+            store_migration_config.get(StoreName.CACHE)
+        )(self.conn)
+
+        self._coherence_store = self._migration_config.get(StoreName.COHERENCE).get(
+            store_migration_config.get(StoreName.COHERENCE)
+        )(self.conn)
 
     def __del__(self):
         try:
@@ -92,6 +125,9 @@ class UnshuffleDB:
     def get_schema_version(self) -> int:
         return self._get_schema_version()
 
+    """
+    CACHE STORE LOGIC
+    """
     def get_all_hashes(self) -> Dict[str, str]:
         return self._cache_store.get_all_hashes()
 
@@ -108,17 +144,17 @@ class UnshuffleDB:
         return self._cache_store.get_cached_hashes(file_stats)
 
     def update_cache(
-        self,
-        file_hash: str,
-        path: Path,
-        size: int,
-        mtime: float,
-        vector: Optional[bytes] = None,
-        feature_space_version: Optional[str] = None,
-        extractor_version: Optional[str] = None,
-        feature_schema_json: Optional[str] = None,
-        analysis_status: Optional[str] = None,
-        analysis_tags_json: Optional[str] = None,
+            self,
+            file_hash: str,
+            path: Path,
+            size: int,
+            mtime: float,
+            vector: Optional[bytes] = None,
+            feature_space_version: Optional[str] = None,
+            extractor_version: Optional[str] = None,
+            feature_schema_json: Optional[str] = None,
+            analysis_status: Optional[str] = None,
+            analysis_tags_json: Optional[str] = None,
     ):
         row = cache_row(
             file_hash,
@@ -163,6 +199,9 @@ class UnshuffleDB:
     def clear_cache(self):
         self._cache_store.clear_cache()
 
+    """
+    SESSION STORAGE LOGIC
+    """
     def register_session(self, session_id: str, source: Path, target: Path, mode: str, is_flat: bool = False):
         storage_sessions.register_session(self, session_id, source, target, mode, is_flat)
 
@@ -188,10 +227,10 @@ class UnshuffleDB:
         return storage_sessions.get_session_records(self, session_id)
 
     def get_recent_sessions(
-        self,
-        limit: int = 10,
-        only_executed: bool = False,
-        target_root: Path | str | None = None,
+            self,
+            limit: int = 10,
+            only_executed: bool = False,
+            target_root: Path | str | None = None,
     ) -> List[Dict]:
         return storage_sessions.get_recent_sessions(self, limit, only_executed, target_root)
 
@@ -207,12 +246,33 @@ class UnshuffleDB:
     def clear_staging(self, session_id: Optional[str] = None):
         storage_sessions.clear_staging(self, session_id)
 
+    def remove_staging_by_source(self, session_id: str, source_path: str):
+        storage_sessions.remove_staging_by_source(self, session_id, source_path)
+
+    def add_staging_records_bulk(self, session_id: str, records: List[Tuple]):
+        storage_sessions.add_staging_records_bulk(self, session_id, records)
+
+    def get_staging_records(self, session_id: str) -> List[Dict]:
+        return storage_sessions.get_staging_records(self, session_id)
+
+    def update_staging_record(self, session_id: str, row_id: int, data: Dict[str, str]):
+        storage_sessions.update_staging_record(self, session_id, row_id, data)
+
+    def clear_all_history(self):
+        storage_sessions.clear_all_history(self)
+
+    def clear_history_for_target(self, target_root: Path | str):
+        storage_sessions.clear_history_for_target(self, target_root)
+
+    """
+    MAINTENANCE STORAGE LOGIC
+    """
     def prune_ephemeral_state(
-        self,
-        keep_session_ids: Set[str] | List[str] | Tuple[str, ...] | None = None,
-        target_root: Path | str | None = None,
-        *,
-        use_restorable_fallback: bool = True,
+            self,
+            keep_session_ids: Set[str] | List[str] | Tuple[str, ...] | None = None,
+            target_root: Path | str | None = None,
+            *,
+            use_restorable_fallback: bool = True,
     ) -> Dict[str, Any]:
         return storage_maintenance.prune_ephemeral_state(
             self,
@@ -228,10 +288,10 @@ class UnshuffleDB:
         return storage_maintenance.database_size_stats(self)
 
     def compact_if_worthwhile(
-        self,
-        *,
-        min_reclaim_mb: int = 512,
-        min_reclaim_ratio: float = 0.25,
+            self,
+            *,
+            min_reclaim_mb: int = 512,
+            min_reclaim_ratio: float = 0.25,
     ) -> Dict[str, Any]:
         return storage_maintenance.compact_if_worthwhile(
             self,
@@ -242,15 +302,9 @@ class UnshuffleDB:
     def force_compact(self) -> Dict[str, Any]:
         return storage_maintenance.force_compact(self)
 
-    def remove_staging_by_source(self, session_id: str, source_path: str):
-        storage_sessions.remove_staging_by_source(self, session_id, source_path)
-
-    def add_staging_records_bulk(self, session_id: str, records: List[Tuple]):
-        storage_sessions.add_staging_records_bulk(self, session_id, records)
-
-    def get_staging_records(self, session_id: str) -> List[Dict]:
-        return storage_sessions.get_staging_records(self, session_id)
-
+    """
+    COHERENCE STORAGE LOGIC
+    """
     def upsert_coherence_results(self, session_id: str, results: List[Any]):
         storage_coherence.upsert_coherence_results(self, session_id, results)
 
@@ -273,9 +327,9 @@ class UnshuffleDB:
         storage_coherence.upsert_coherence_review_decisions(self, session_id, decisions)
 
     def list_coherence_review_decisions(
-        self,
-        source_paths: List[str] | None = None,
-        file_hashes: List[str] | None = None,
+            self,
+            source_paths: List[str] | None = None,
+            file_hashes: List[str] | None = None,
     ) -> List[Dict[str, Any]]:
         return storage_coherence.list_coherence_review_decisions(self, source_paths, file_hashes)
 
@@ -314,18 +368,18 @@ class UnshuffleDB:
     def _normalize_acoustic_vector(self, value) -> Optional[bytes]:
         return cache_utils.normalize_feature_vector(value)
 
-    def update_staging_record(self, session_id: str, row_id: int, data: Dict[str, str]):
-        storage_sessions.update_staging_record(self, session_id, row_id, data)
-
+    """
+    STORAGE LEARNING LOGIC
+    """
     def search_staging(self, session_id: str, query_text: str) -> List[int] | Set[int]:
         return storage_learning.search_staging(self, session_id, query_text)
 
     def search_similar_records(
-        self,
-        session_id: str,
-        target_id: int,
-        limit: int = 50,
-        candidate_ids: Set[int] | None = None,
+            self,
+            session_id: str,
+            target_id: int,
+            limit: int = 50,
+            candidate_ids: Set[int] | None = None,
     ) -> List[int]:
         return storage_learning.search_similar_records(
             self,
@@ -353,12 +407,9 @@ class UnshuffleDB:
     def delete_token_adjustments(self, adjustment_keys: List[tuple]) -> int:
         return storage_learning.delete_token_adjustments(self, adjustment_keys)
 
-    def clear_all_history(self):
-        storage_sessions.clear_all_history(self)
-
-    def clear_history_for_target(self, target_root: Path | str):
-        storage_sessions.clear_history_for_target(self, target_root)
-
+    """
+    STORAGE TAXONOMY LOGIC
+    """
     def reset_adjustments(self):
         storage_taxonomy.reset_adjustments(self)
 
